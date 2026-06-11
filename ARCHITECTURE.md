@@ -336,6 +336,12 @@ last-minute panic.
 - Rules engine: event keywords or tags trigger reminder types
 - Delivery via email (simplest) or a push to the Hearth Home dashboard widget
 
+**Integration concept — Almanac + Purse:**
+An upcoming birthday or event in the calendar could surface a budget prompt
+in Hearth Purse alongside the reminder — "Aine's friend's party in 3 weeks,
+no gift budget allocated yet." Cross-module communication of this kind should
+be via internal API calls between backends, never shared database access.
+
 **Notes:** The integration with Purse is particularly interesting — an upcoming
 birthday in the calendar could surface a budget prompt in the finance view.
 Cross-module communication at this level should be via internal API calls,
@@ -394,13 +400,41 @@ repurposed as names for tools that manage those same things.
 New modules should follow this convention. The name should be a word that
 already meant something domestic before software existed.
 
+### Why Hearth Purse specifically
+
+The name emerged from thinking about what the finance module actually is: not
+a financial analytics platform, not a budgeting app, but something made for a
+specific household to understand its own money more clearly.
+
+*Purse* is slightly archaic, which is intentional. It evokes something personal
+and domestic rather than financial and transactional — in a way that "wallet",
+"finance", or "money" do not. The name is not trying to compete with Monzo or
+Plaid. It is trying to feel like it belongs in your home.
+
+This applies to the whole ecosystem. Choose character over convention when
+naming things. "Purse" over "Wallet". "Larder" over "Pantry Manager". The
+slightly archaic feel is a feature, not a limitation — particularly given that
+the project is built for a household in England, where these words still carry
+their original warmth.
+
 ---
 
 ## 7. Design Language
 
-The Hearth visual language applies across all modules. Full detail is in
-`shared/design-tokens/` and in each module's frontend documentation. The
-principles are:
+The Hearth visual language applies across all modules. The guiding brief:
+
+> Warm, unhurried, considered. The kind of tool that feels like it was made for
+> your household specifically, not licensed to you by a corporation.
+
+Hearth's visual design is an explicit rejection of the cold blues, sharp edges,
+and anxious density of mainstream fintech and productivity interfaces. Every
+design decision across every module should be tested against one question:
+*does this feel like it belongs in our home?*
+
+Full token values live in `shared/design-tokens/`. The principles below apply
+to all modules.
+
+### Core principles
 
 **Warm, not clinical.** Parchment and earthy tones rather than the cold blues
 of fintech and productivity software. The palette should feel like it belongs
@@ -413,8 +447,9 @@ The data tells the story; the design holds it quietly.
 Something with personality, suggesting craft. Clean sans-serif for data and
 body text where legibility matters most.
 
-**Personal, not generic.** Every design decision should be tested against one
-question: *does this feel like it belongs in our home?*
+**Personal, not generic.** When something could be generic or specific, choose
+specific. A dashboard that feels made for your family is more useful than one
+that could be anyone's.
 
 ### Colour direction
 
@@ -423,7 +458,7 @@ question: *does this feel like it belongs in our home?*
 | Background | Warm off-white, parchment, linen — never pure white |
 | Accents | Terracotta, forest green, ochre, deep teal |
 | Dark mode | Deep walnut or charcoal — warm, not pure black |
-| Data/charts | Warm palette; avoid electric blues and greens |
+| Data/charts | Warm palette; avoid electric blues and greens of fintech |
 
 ### Typography direction
 
@@ -431,7 +466,38 @@ question: *does this feel like it belongs in our home?*
 |---|---|
 | Headings | Serif or humanist — Lora, Playfair Display, Fraunces, Source Serif |
 | Body / data | Clean readable sans-serif — Inter, DM Sans |
-| Scale | Sized for reading, not scanning — generous line height |
+| Scale | Sized for reading, not scanning — generous line height, comfortable weight |
+
+### Layout and interaction
+
+- **Unhurried layout** — generous whitespace, nothing competing for attention
+- **Charts should feel illustrative, not clinical** — warm colour palettes,
+  rounded corners where appropriate, annotations that feel hand-considered
+- **No aggressive visual hierarchy** — avoid the fintech pattern of giant KPI
+  numbers dominating every screen; the data tells the story, the design holds it
+
+### Design token structure
+
+All modules reference `shared/design-tokens/` as the single source of truth.
+Tailwind in each module is configured to use these tokens as its palette,
+ensuring visual consistency without duplicating values.
+
+```
+shared/
+└── design-tokens/
+    ├── colours.css        # CSS custom properties: --hearth-parchment, --hearth-terracotta, etc.
+    ├── typography.css     # Font stacks, size scale, line heights
+    ├── spacing.css        # Consistent spacing scale
+    └── index.css          # Imports all tokens — reference this in each module's Tailwind config
+```
+
+### Design drift
+
+This philosophy should be revisited at the start of each new module's frontend
+phase, so that drift toward generic conventions is caught early. The risk is
+real — it is always easier to reach for a familiar fintech pattern than to make
+a considered choice. The naming convention (Purse, Larder, Almanac) is a
+built-in reminder: these tools belong in a home, not an app store.
 
 ---
 

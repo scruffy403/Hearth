@@ -30,6 +30,7 @@ build/
 
 # Docker
 .docker/
+.dockerignore
 
 # Database
 *.sqlite
@@ -56,3 +57,6 @@ site/
 
 # Alembic — keep versions/ but not compiled cache
 backend/migrations/__pycache__/
+
+# OrbStack / Docker runtime
+.orbstack/

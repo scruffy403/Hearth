@@ -1,33 +1,35 @@
-# Bank Statement Visualizer — v2 Specification
+# Hearth Purse — (V2 of Bank Visualization prototype) Specification
 
 **Author:** John Soto  
 **Status:** Draft  
 **Date:** June 2026  
-**Project:** `bank-viz` (monorepo)
+**Project:** `hearth` (monorepo)
 
 ---
 
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
-2. [Goals and Non-Goals](#2-goals-and-non-goals)
-3. [System Architecture](#3-system-architecture)
-4. [Data Architecture](#4-data-architecture)
-5. [Backend — FastAPI](#5-backend--fastapi)
-6. [Frontend — React](#6-frontend--react)
-7. [Infrastructure and Deployment](#7-infrastructure-and-deployment)
-8. [Testing Strategy](#8-testing-strategy)
-9. [Documentation](#9-documentation)
-10. [Phased Build Plan](#10-phased-build-plan)
-11. [Future Considerations](#11-future-considerations)
+2. [The Hearth Ecosystem](#2-the-hearth-ecosystem)
+3. [Goals and Non-Goals](#3-goals-and-non-goals)
+4. [System Architecture](#4-system-architecture)
+5. [Data Architecture](#5-data-architecture)
+6. [Backend — FastAPI](#6-backend--fastapi)
+7. [Frontend — React](#7-frontend--react)
+8. [Infrastructure and Deployment](#8-infrastructure-and-deployment)
+9. [Testing Strategy](#9-testing-strategy)
+10. [Documentation](#10-documentation)
+11. [Phased Build Plan](#11-phased-build-plan)
+12. [Future Considerations](#12-future-considerations)
+13. [Naming and Design Philosophy](#13-naming-and-design-philosophy)
 
 ---
 
 ## 1. Project Overview
 
-A personal household finance dashboard for two users (John and wife), replacing the v1 Streamlit prototype. v2 is a properly separated full-stack application:
+A personal household finance dashboard for two users (John and Naomi), replacing the v1 Streamlit prototype. v2 is a properly separated full-stack application:
 
-- **FastAPI backend** handling all data ingestion, ML categorisation, forecasting, and persistence
+- **FastAPI backend** handling all data ingestion, ML categorization, forecasting, and persistence
 - **React frontend** providing interactive dashboard views
 - **YNAB as the primary data source**, replacing manual CSV downloads
 - **Deployed on a self-hosted VPS** (Hetzner), accessible to both users over HTTPS
@@ -48,13 +50,120 @@ The v1 Streamlit app remains functional as the public portfolio demo. v2 is the 
 
 ---
 
-## 2. Goals and Non-Goals
+## 2. The Hearth Ecosystem
+
+Hearth Purse is the first module of a broader personal home management ecosystem
+called **Hearth**. This section documents that larger vision so that architectural
+decisions made now can accommodate it without requiring structural rework later.
+
+### Vision
+
+Hearth is a suite of small, well-made tools for home life — built gradually, for
+personal and family use, each solving a real problem. The guiding principle is that
+running a household involves a surprising amount of invisible cognitive load: tracking
+money, planning meals, remembering what's in the fridge, keeping on top of events
+before they creep up. Hearth modules aim to reduce that overhead quietly and reliably,
+without the noise and monetisation incentives of commercial alternatives.
+
+Each module is self-contained but shares infrastructure, design language, and
+eventually a common entry point.
+
+### Planned and possible modules
+
+| Module | Name | Purpose | Status |
+|---|---|---|---|
+| Finance dashboard | **Hearth Purse** | Household budget, cashflow, ML categorisation | v2 in progress |
+| Grocery / pantry | **Hearth Larder** | Track what's in stock, reduce waste, shopping lists | Concept |
+| Meal planning | **Hearth Table** | Weekly meal plans, recipe linking, Larder integration | Concept |
+| Calendar intelligence | **Hearth Almanac** | Surfaces upcoming events with actionable reminders | Concept |
+| Home entry point | **Hearth Home** | Landing page linking all modules, family photo display | Future frontend phase |
+
+Names follow the same aesthetic as Hearth Purse — domestic, slightly archaic,
+warm rather than techy. A larder is where food is stored; a table is where the
+family eats; an almanac tracks time and seasons. The naming should feel like it
+belongs in a home, not a product catalogue.
+
+### Monorepo structure for the ecosystem
+
+All modules live in a single repository. This avoids the coordination overhead of
+multiple repos while the project is built and maintained by one person. If any module
+ever grew to the point of needing independent deployment pipelines or separate teams,
+extracting it into its own repo is straightforward — monorepo to multi-repo is a
+well-understood migration; multi-repo to monorepo is painful.
+
+```
+hearth/                          # Repository root
+├── purse/                       # Finance dashboard (this project)
+│   ├── backend/                 # FastAPI
+│   └── frontend/                # React
+├── larder/                      # Future: grocery/pantry tracking
+│   ├── backend/
+│   └── frontend/
+├── almanac/                     # Future: calendar/reminder intelligence
+│   ├── backend/
+│   └── frontend/
+├── shared/                      # Shared across modules
+│   ├── design-tokens/           # Colours, typography, spacing — single source of truth
+│   └── components/              # Shared React components (eventually)
+├── home/                        # The Hearth landing page (future frontend phase)
+├── docker-compose.yml           # Orchestrates all running modules
+├── docker-compose.dev.yml       # Local dev overrides
+└── Caddyfile                    # Routing: purse.hearth.local, larder.hearth.local, etc.
+```
+
+### Adding a new module
+
+When a new Hearth module is ready to start:
+
+1. Create a new top-level folder (e.g. `larder/`) with its own `backend/` and
+   `frontend/` subdirectories following the same structure as `purse/`
+2. Add a new service block to `docker-compose.yml`
+3. Add a routing rule to `Caddyfile` (e.g. `larder.yourdomain.com`)
+4. Reference shared design tokens from `shared/design-tokens/`
+
+No changes to existing modules are required. Each module is independently
+deployable within the shared Compose stack.
+
+### Google Calendar integration (Hearth Almanac concept)
+
+The calendar/reminder idea — surfacing upcoming events with household-relevant
+context like "Aine's friend's birthday party in 3 weeks, gift not yet sorted" —
+is a concrete use case for a future module. The technical shape would be:
+
+- OAuth connection to Google Calendar (both family members' calendars)
+- A lightweight rules engine: event keywords or tags trigger reminder types
+- Push to a notification channel (email digest, or a dashboard widget on the
+  Hearth Home page)
+- Integration with Hearth Purse: a birthday in 3 weeks could surface a budget
+  prompt alongside the reminder
+
+This is well-suited to a FastAPI backend module using the Google Calendar API,
+with APScheduler running daily checks — the same pattern as the YNAB sync in
+Hearth Purse.
+
+### Scaling consideration
+
+At personal/family scale, a monorepo with shared Docker Compose infrastructure
+is the right architecture. If Hearth ever evolved toward a product offered to
+other households, the natural evolution would be:
+
+- Each module becomes a separately deployable service with its own Docker image
+- A shared authentication service handles user identity across modules
+- Modules communicate via internal API calls rather than shared database access
+- The monorepo can remain — but deployment pipelines become per-module
+
+That evolution requires no structural rework of the codebase as designed. The
+service boundaries are already clean.
+
+---
+
+## 3. Goals and Non-Goals
 
 ### Goals
 
 - Automate Nationwide transaction ingestion via the existing YNAB integration (no CSV steps)
 - Provide all existing dashboard views (overview, cashflow, forecasting, categories, merchants, anomalies, budgets)
-- Improve ML categorisation by training on the full YNAB approved-transaction history
+- Improve ML categorization by training on the full YNAB approved-transaction history
 - Store ML confidence scores and prediction provenance for future explainability (SHAP)
 - Keep architecture extensible: Prophet forecasting, SHAP explainability, and Polars pipeline migration should be addable without structural changes
 - Support two concurrent users with shared credentials, upgradeable to individual logins
@@ -69,7 +178,7 @@ The v1 Streamlit app remains functional as the public portfolio demo. v2 is the 
 
 ---
 
-## 3. System Architecture
+## 4. System Architecture
 
 ### High-level overview
 
@@ -88,7 +197,7 @@ graph TB
         subgraph Backend["FastAPI Backend :8000"]
             API[REST API\nRouters]
             SCHED[APScheduler\nYNAB sync job]
-            SVC[Services Layer\ncategorisation · ml · forecasting · anomalies]
+            SVC[Services Layer\ncategorization · ml · forecasting · anomalies]
         end
 
         subgraph Frontend["React Frontend :3000"]
@@ -99,7 +208,7 @@ graph TB
         PG[(PostgreSQL\n:5432)]
     end
 
-    subgraph LocalDev["Developer Mac — Docker Desktop"]
+    subgraph LocalDev["Developer Mac — OrbStack"]
         DEVCOMPOSE[docker-compose.yml\n same stack]
     end
 
@@ -124,7 +233,7 @@ graph TB
 ### Repository structure (monorepo)
 
 ```
-bank-viz/
+purse/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py                  # FastAPI app factory, router registration, lifespan
@@ -152,7 +261,7 @@ bank-viz/
 │   │   └── services/                # All business logic — testable without HTTP
 │   │       ├── ynab.py              # YNAB API client + sync orchestration
 │   │       ├── payee_normalizer.py  # Ported from v1
-│   │       ├── categorisation.py    # Rule-based pipeline
+│   │       ├── categorization.py    # Rule-based pipeline
 │   │       ├── ml.py                # Training, inference, confidence scores
 │   │       ├── forecasting.py       # Cashflow extrapolation (Prophet-ready)
 │   │       ├── anomalies.py         # IQR outlier detection
@@ -165,7 +274,7 @@ bank-viz/
 │   │   ├── conftest.py              # Fixtures: test DB, async client, factory_boy factories
 │   │   ├── unit/                    # Pure service-layer tests, no HTTP
 │   │   │   ├── test_payee_normalizer.py
-│   │   │   ├── test_categorisation.py
+│   │   │   ├── test_categorization.py
 │   │   │   ├── test_ml.py
 │   │   │   ├── test_forecasting.py
 │   │   │   └── test_anomalies.py
@@ -235,7 +344,7 @@ bank-viz/
 
 ---
 
-## 4. Data Architecture
+## 5. Data Architecture
 
 ### PostgreSQL schema
 
@@ -299,7 +408,7 @@ erDiagram
 
 **`ynab_transaction_id` (UNIQUE)** — makes the sync idempotent. Re-running the sync job never produces duplicates; it upserts on this key.
 
-**`category_source` enum: `'ynab' | 'ml' | 'manual_override'`** — tracks the provenance of every categorisation. This powers the active learning loop and is the hook for SHAP explainability in a later phase.
+**`category_source` enum: `'ynab' | 'ml' | 'manual_override'`** — tracks the provenance of every categorization. This powers the active learning loop and is the hook for SHAP explainability in a later phase.
 
 **`ml_confidence` (nullable numeric)** — null when `category_source != 'ml'`. Enables surfacing low-confidence predictions to the user for review.
 
@@ -309,7 +418,7 @@ erDiagram
 
 ---
 
-## 5. Backend — FastAPI
+## 6. Backend — FastAPI
 
 ### Service layer class diagram
 
@@ -509,7 +618,7 @@ class Settings(BaseSettings):
 
 ---
 
-## 6. Frontend — React
+## 7. Frontend — React
 
 ### Technology choices
 
@@ -522,6 +631,83 @@ class Settings(BaseSettings):
 | Routing | React Router v6 | Standard, well-understood |
 | Styling | Tailwind CSS | Utility-first, no CSS-in-JS overhead |
 | Testing | Vitest + React Testing Library + MSW | Fast, behaviour-focused, realistic API mocking |
+
+### Design language — the Hearth aesthetic
+
+Hearth Purse should feel like it belongs in your home, not in a bank's mobile
+app. The visual design is an explicit rejection of the cold blues, sharp edges,
+and anxious density of mainstream fintech interfaces. The guiding brief:
+
+> Warm, unhurried, considered. The kind of tool that feels like it was made for
+> your household specifically, not licensed to you by a corporation.
+
+#### Why this matters for Hearth Purse
+
+The name *Purse* is deliberately archaic — it evokes something personal and
+domestic rather than financial and transactional. The UI should honour that.
+Someone opening Hearth Purse to check their spending should feel oriented and
+calm, not surveilled.
+
+#### Colour and tone
+
+- **Warm neutrals as the base** — parchment, linen, warm off-whites rather than
+  pure white or cool grey
+- **Earthy accent colours** — terracotta, forest green, ochre, deep teal; avoid
+  the electric blues and greens of fintech
+- **Dark mode should be warm too** — deep walnut or charcoal, not pure black
+
+#### Typography
+
+- A **serif or humanist typeface for headings** — something with personality,
+  suggesting craft and permanence. Options to explore: Lora, Playfair Display,
+  Source Serif, Fraunces
+- A **clean, readable sans-serif for data and body text** — legibility matters
+  for numbers; something like Inter or DM Sans works well alongside a display serif
+- **Type should feel sized for reading**, not for scanning dashboards — generous
+  line height, comfortable weight
+
+#### Layout and interaction
+
+- **Unhurried layout** — generous whitespace, nothing competing for attention
+- **Charts should feel illustrative, not clinical** — warm colour palettes in
+  Plotly, rounded corners where appropriate, annotations that feel hand-considered
+- **No aggressive visual hierarchy** — avoid the fintech pattern of giant KPI
+  numbers dominating every screen; the data tells the story, the design just
+  holds it
+
+#### The Hearth Home page (future phase)
+
+A longer-term frontend ambition is a true Hearth landing page that serves as
+the entry point to all modules. The design concept:
+
+- The page is styled to evoke looking at a hearth — warm, textured, a focal point
+- **Picture frames** are displayed as elements on the page, showing scaled-down
+  images from the family photo collection — swappable, personal, genuinely yours
+- Each module (Purse, Larder, Almanac) is accessible from this page as a
+  distinct element — a book on a shelf, a door, a frame
+- This is a **separate frontend phase** (effectively Hearth Frontend v2) and
+  should not block the functional dashboard work
+
+When this phase arrives, the `home/` directory in the monorepo becomes its own
+React application, sharing design tokens from `shared/design-tokens/` to ensure
+visual consistency across modules.
+
+#### Design token structure (shared/)
+
+```
+shared/
+└── design-tokens/
+    ├── colours.css        # CSS custom properties: --hearth-parchment, --hearth-terracotta, etc.
+    ├── typography.css     # Font stacks, size scale, line heights
+    ├── spacing.css        # Consistent spacing scale
+    └── index.css          # Imports all tokens — reference this in each module's Tailwind config
+```
+
+Tailwind can be configured to use these tokens as its colour and typography
+palette, meaning every module automatically shares the Hearth visual language
+without duplicating values.
+
+---
 
 ### Page structure
 
@@ -562,7 +748,7 @@ export const transactionsApi = {
 
 ---
 
-## 7. Infrastructure and Deployment
+## 8. Infrastructure and Deployment
 
 ### Docker Compose (production)
 
@@ -572,7 +758,7 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: bankviz
+      POSTGRES_DB: hearth_purse
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
@@ -582,7 +768,7 @@ services:
   backend:
     build: ./backend
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bankviz
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hearth_purse
       YNAB_API_KEY: ${YNAB_API_KEY}
       YNAB_BUDGET_ID: ${YNAB_BUDGET_ID}
     depends_on:
@@ -654,7 +840,7 @@ Run locally: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`
 
 ### Docker on macOS (Apple Silicon)
 
-Docker Desktop for Mac handles ARM natively. No special configuration needed for local development. For production image builds targeting the Hetzner VPS (x86_64), GitHub Actions handles cross-compilation. A basic workflow:
+OrbStack handles ARM natively. No special configuration needed for local development. For production image builds targeting the Hetzner VPS (x86_64), GitHub Actions handles cross-compilation. A basic workflow:
 
 ```yaml
 # .github/workflows/deploy.yml
@@ -674,7 +860,7 @@ Docker Desktop for Mac handles ARM natively. No special configuration needed for
 
 ---
 
-## 8. Testing Strategy
+## 9. Testing Strategy
 
 ### Philosophy
 
@@ -691,7 +877,7 @@ tests/
 ├── conftest.py           # Shared fixtures
 ├── unit/                 # Service-layer tests — no DB, no HTTP
 │   ├── test_payee_normalizer.py
-│   ├── test_categorisation.py
+│   ├── test_categorization.py
 │   ├── test_ml.py
 │   ├── test_forecasting.py
 │   └── test_anomalies.py
@@ -760,7 +946,7 @@ cd frontend && npx vitest run --coverage
 
 ---
 
-## 9. Documentation
+## 10. Documentation
 
 ### Three layers
 
@@ -774,7 +960,7 @@ cd frontend && npx vitest run --coverage
 
 ```yaml
 # backend/mkdocs.yml
-site_name: Bank Viz — Backend
+site_name: Hearth Purse — Backend
 theme:
   name: material
 plugins:
@@ -787,7 +973,7 @@ nav:
   - Home: index.md
   - Services:
     - YNAB Sync: services/ynab.md
-    - Categorisation: services/categorisation.md
+    - categorization: services/categorization.md
     - ML Pipeline: services/ml.md
     - Forecasting: services/forecasting.md
 ```
@@ -817,7 +1003,7 @@ FastAPI endpoint docstrings become the description in the auto-generated Swagger
 
 ---
 
-## 10. Phased Build Plan
+## 11. Phased Build Plan
 
 ### Phase 1 — Foundation
 
@@ -830,7 +1016,7 @@ FastAPI endpoint docstrings become the description in the auto-generated Swagger
 - [ ] Pydantic `Settings` reading from `.env`
 - [ ] Health check endpoint: `GET /api/v1/health`
 - [ ] Basic Auth configured in Caddyfile
-- [ ] Docker Desktop installed on Mac, stack runs locally
+- [ ] OrbStack installed on Mac, stack runs locally
 - [ ] GitHub repo created, `.gitignore` excluding `.env` and secrets
 
 **Done when:** `docker compose up` on a fresh clone produces a healthy stack. `/api/v1/health` returns 200. Postgres has the schema.
@@ -848,11 +1034,11 @@ FastAPI endpoint docstrings become the description in the auto-generated Swagger
 - [ ] Integration test: trigger sync against a mocked YNAB API, assert DB state
 - [ ] Check oldest YNAB transaction date and document it
 
-**Done when:** Sync job runs, transactions appear in Postgres with correct categorisation.
+**Done when:** Sync job runs, transactions appear in Postgres with correct categorization.
 
 ### Phase 3 — ML pipeline
 
-**Goal:** ML categorisation improving on rule-based, low-confidence queue available.
+**Goal:** ML categorization improving on rule-based, low-confidence queue available.
 
 - [ ] `MLService.train()` on YNAB-approved transactions
 - [ ] `MLService.predict_batch()` filling `category_source = 'ml'` and `ml_confidence`
@@ -914,7 +1100,7 @@ FastAPI endpoint docstrings become the description in the auto-generated Swagger
 
 ---
 
-## 11. Future Considerations
+## 12. Future Considerations
 
 These are deliberately out of scope for v2 but the architecture is structured to accommodate them without rework.
 
@@ -932,7 +1118,7 @@ Hold out the last N months, run the forecast on truncated history, compare predi
 
 ### Polars in the data pipeline
 
-The services layer works with Python lists and dicts at the boundary with SQLAlchemy. Introducing Polars for the analytical transforms inside `forecasting.py`, `anomalies.py`, and `categorisation.py` is an internal implementation change — no API or schema impact. The sklearn ML pipeline retains pandas (or raw lists) at the `TfidfVectorizer` boundary.
+The services layer works with Python lists and dicts at the boundary with SQLAlchemy. Introducing Polars for the analytical transforms inside `forecasting.py`, `anomalies.py`, and `categorization.py` is an internal implementation change — no API or schema impact. The sklearn ML pipeline retains pandas (or raw lists) at the `TfidfVectorizer` boundary.
 
 ### Individual user logins (JWT)
 
@@ -945,3 +1131,47 @@ Currently `merchant_overrides` is global. Adding a nullable `user_id` foreign ke
 ### TypeScript client generation from OpenAPI
 
 FastAPI exports an OpenAPI schema at `/openapi.json`. Tools like `openapi-typescript` can generate the TypeScript types automatically, eliminating the manual sync between `schemas/` and `types/`. Worth introducing once the API is stable and the manual maintenance becomes noticeable overhead.
+
+---
+
+## 13. Naming and Design Philosophy
+
+### Why Hearth Purse
+
+The name emerged from thinking about what this tool actually is: not a financial
+analytics platform, not a budgeting app, but something made for a specific
+household to understand its own money more clearly.
+
+*Hearth* — the centre of a home, where things are managed and warmth originates.
+It felt like the right name for a suite of tools built around home life, with
+enough character to be distinctive without trying to sound like a startup.
+
+*Purse* — an old English word for a household money holder, personal and domestic
+in a way that "wallet", "finance", or "money" are not. It is slightly archaic,
+which is intentional. The name is not trying to compete with Monzo or Plaid. It
+is trying to feel like it belongs in your home.
+
+The pairing works because it is honest about what it is: a household purse,
+managed from the hearth.
+
+### What the name should mean for design decisions
+
+Every design decision in Hearth Purse should be tested against one question:
+**does this feel like it belongs in our home?**
+
+Commercial fintech design optimises for trust signals, conversion, and retention.
+Hearth Purse has none of those pressures. It can optimise purely for the
+experience of the two people who actually use it — which means it can be warmer,
+quieter, and more personal than anything a product team would ship.
+
+Concretely:
+
+- Choose warmth over clinical precision in colour and type
+- Choose calm over urgency in layout and information density
+- Choose character over convention when naming things — "Purse" over "Wallet",
+  "Larder" over "Pantry Manager"
+- When something could be generic or specific, choose specific — a dashboard
+  that feels made for your family is more useful than one that could be anyone's
+
+This philosophy should be documented and revisited at the start of each frontend
+phase, so that design drift toward generic fintech conventions is caught early.

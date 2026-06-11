@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: hearth_purse
+      POSTGRES_USER: hearth
+      POSTGRES_PASSWORD: hearth
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hearth:hearth@postgres:5432/hearth_purse
+      YNAB_API_KEY: ${YNAB_API_KEY:-placeholder}
+      YNAB_BUDGET_ID: ${YNAB_BUDGET_ID:-placeholder}
+      APP_ENV: development
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # frontend:
+  #   build: ./frontend
+  #   restart: unless-stopped
+
+  # caddy:
+  #   image: caddy:2-alpine
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile
+  #     - caddy_data:/data
+  #   depends_on:
+  #     - backend
+  #     - frontend
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+  caddy_data:
