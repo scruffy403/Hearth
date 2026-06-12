@@ -4,11 +4,11 @@ services:
       - ./backend:/app       # hot reload via uvicorn --reload
     ports:
       - "8000:8000"          # direct access for testing
-  frontend:
-    volumes:
-      - ./frontend/src:/app/src  # Vite HMR
-    ports:
-      - "3000:3000"
+#  frontend:
+#    volumes:
+#      - ./frontend/src:/app/src  # Vite HMR
+#    ports:
+#      - "3000:3000"
   postgres:
     ports:
       - "5432:5432"          # direct DB access from host tools
