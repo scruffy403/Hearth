@@ -944,6 +944,11 @@ cd backend && pytest --cov=app --cov-report=term-missing
 cd frontend && npx vitest run --coverage
 ```
 
+### Running tests using `docker` command example:
+```bash
+docker compose exec backend pytest tests/unit/test_ml.py -v
+```
+
 ---
 
 ## 10. Documentation
