@@ -56,3 +56,45 @@ def test_ynab_fuzzy_match():
     result = service.categorize("Tesco")
     assert result.category == "Groceries"
     assert result.source == "ynab_fuzzy"
+
+def test_ynab_category_mapping_takes_priority_over_keywords():
+    service = CategorizationService(
+        overrides={},
+        keyword_rules={"tesco": "Groceries"}
+    )
+    # YNAB says Dining Out, keyword would say Groceries
+    # YNAB mapping should win
+    result = service.categorize(
+        merchant_clean="Tesco",
+        ynab_category="Dining Out",
+        amount=0.0
+    )
+    assert result.category == "Eating Out"
+    assert result.source == "ynab"
+
+def test_unmapped_ynab_category_falls_through_to_keywords():
+    service = CategorizationService(
+        overrides={},
+        keyword_rules={"tesco": "Groceries"}
+    )
+    result = service.categorize(
+        merchant_clean="Tesco",
+        ynab_category="Some Unmapped Category",
+        amount=0.0
+    )
+    assert result.category == "Groceries"
+    assert result.source == "keyword"
+
+def test_ynab_category_with_trailing_space_is_mapped():
+    """
+    Regression test: YNAB category names sometimes have trailing whitespace.
+    The mapping must strip before lookup to avoid silent misses.
+    """
+    service = CategorizationService(overrides={}, keyword_rules={})
+    result = service.categorize(
+        merchant_clean="USAA Insurance",
+        ynab_category="Car insurance ",  # trailing space
+        amount=-96.84
+    )
+    assert result.category == "Transport"
+    assert result.source == "ynab"

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 
 from rapidfuzz import process, fuzz
+from app.services.category_mapping import map_ynab_to_dashboard
 
 
 @dataclass
@@ -72,25 +73,20 @@ class CategorizationService:
         self.ynab_mapping = ynab_mapping or {}
 
     def categorize(
-        self,
-        merchant_clean: str,
-        ynab_category: Optional[str] = None,
-        amount: float = 0.0,
+            self,
+            merchant_clean: str,
+            ynab_category: Optional[str] = None,
+            amount: float = 0.0,
     ) -> CategoryResult:
-        """
-        Categorise a single normalised merchant name.
-
-        Args:
-            merchant_clean: Normalised merchant name from PayeeNormalizer
-            ynab_category:  Category name from YNAB if available
-            amount:         Transaction amount — positive = income, negative = expense
-
-        Returns:
-            CategoryResult with category name and source
-        """
-        # Income detection — takes priority over everything
+        # Income detection
         if amount > 0:
             return CategoryResult(category="Income", source="amount")
+
+        # 0. Direct YNAB category mapping — highest quality signal
+        if ynab_category:
+            mapped = map_ynab_to_dashboard(ynab_category.strip())
+            if mapped:
+                return CategoryResult(category=mapped, source="ynab")
 
         # 1. Manual override
         result = self._apply_manual_override(merchant_clean)

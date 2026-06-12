@@ -232,7 +232,7 @@ class YNABService:
                 amount = self._milliunit_to_decimal(tx.get("amount", 0))
                 category_ynab = category_lookup.get(
                     tx.get("category_id", ""), ""
-                )
+                ).strip()
 
                 # Categorise
                 cat_result = categorizer.categorize(
