@@ -57,3 +57,17 @@ class TestYNABService:
         service = YNABService.__new__(YNABService)
         tx = {"transfer_account_id": None, "amount": -100000}
         assert service._is_transfer(tx) is False
+
+    def test_date_string_is_not_accepted_as_date_object(self):
+        """
+        Regression test: YNAB returns dates as strings ('YYYY-MM-DD').
+        The sync must convert them to Python date objects before inserting.
+        This test documents the expected type to prevent regressions.
+        """
+        from datetime import date
+        service = YNABService.__new__(YNABService)
+        result = service._parse_date("2026-06-05")
+        assert isinstance(result, date)
+        assert result.year == 2026
+        assert result.month == 6
+        assert result.day == 5

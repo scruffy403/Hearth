@@ -1,4 +1,5 @@
 from __future__ import annotations
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -120,6 +121,14 @@ class YNABService:
     # Unit-testable helper methods
     # ------------------------------------------------------------------
 
+    def _parse_date(self, date_string: str) -> date:
+        """
+        Convert a YNAB date string to a Python date object.
+        YNAB returns dates as 'YYYY-MM-DD' strings; asyncpg requires
+        a proper date object for DATE column inserts.
+        """
+        return date.fromisoformat(date_string)
+
     def _milliunit_to_decimal(self, amount_milli: int) -> Decimal:
         """
         Convert YNAB milliunits to a Decimal amount.
@@ -161,23 +170,41 @@ class YNABService:
     # Sync orchestration — will be called by APScheduler
     # ------------------------------------------------------------------
 
-    async def sync_transactions(self) -> dict[str, Any]:
+    async def sync_transactions(
+            self,
+            db: AsyncSession,
+    ) -> dict[str, Any]:
         """
         Fetch recent transactions from YNAB and upsert into the database.
-        Returns a summary dict with counts and any errors.
+        Uses ynab_transaction_id as the unique key — safe to run repeatedly.
 
-        Full implementation in Phase 2 — database writes added once
-        the session injection pattern is finalised.
+        Args:
+            db: AsyncSession injected from the router or scheduler
+
+        Returns:
+            Summary dict with counts and any errors
         """
+        from sqlalchemy import select
+        from sqlalchemy.dialects.postgresql import insert
+
+        from app.models.transaction import Transaction
         from app.services.payee_normalizer import PayeeNormalizer
         from app.services.categorization import CategorizationService
+        from app.models.merchant_override import MerchantOverride
 
         normalizer = PayeeNormalizer()
 
-        # Fetch raw data
-        since_date = self._get_lookback_date(
-            days=settings.ynab_lookback_days
-        )
+        # Load merchant overrides from DB for categorisation
+        override_rows = await db.execute(select(MerchantOverride))
+        overrides = {
+            row.merchant_clean: row.category_dashboard
+            for row in override_rows.scalars().all()
+        }
+
+        categorizer = CategorizationService(overrides=overrides)
+
+        # Fetch from YNAB
+        since_date = self._get_lookback_date(days=settings.ynab_lookback_days)
         raw_transactions = await self.client.get_transactions(
             budget_id=self.budget_id,
             since_date=since_date,
@@ -187,7 +214,7 @@ class YNABService:
         )
         category_lookup = self._build_category_lookup(category_groups)
 
-        results = {
+        results: dict[str, Any] = {
             "fetched": len(raw_transactions),
             "synced": 0,
             "skipped_transfers": 0,
@@ -196,12 +223,10 @@ class YNABService:
 
         for tx in raw_transactions:
             try:
-                # Skip transfers
                 if self._is_transfer(tx):
                     results["skipped_transfers"] += 1
                     continue
 
-                # Normalise
                 merchant_raw = tx.get("payee_name") or ""
                 merchant_clean = normalizer.normalize(merchant_raw)
                 amount = self._milliunit_to_decimal(tx.get("amount", 0))
@@ -209,7 +234,40 @@ class YNABService:
                     tx.get("category_id", ""), ""
                 )
 
-                # TODO: upsert to database (Phase 2 — db session injection)
+                # Categorise
+                cat_result = categorizer.categorize(
+                    merchant_clean=merchant_clean,
+                    ynab_category=category_ynab,
+                    amount=float(amount),
+                )
+
+                # Upsert — insert or update on conflict with ynab_transaction_id
+                stmt = insert(Transaction).values(
+                    ynab_transaction_id=tx["id"],
+                    date=self._parse_date(tx["date"]),
+                    amount=amount,
+                    currency="GBP",
+                    merchant_raw=merchant_raw,
+                    merchant_clean=merchant_clean,
+                    category_ynab=category_ynab,
+                    category_dashboard=cat_result.category,
+                    category_source=cat_result.source,
+                    ml_confidence=None,
+                    ynab_approved=tx.get("approved", False),
+                    is_transfer=False,
+                    notes=tx.get("memo"),
+                ).on_conflict_do_update(
+                    index_elements=["ynab_transaction_id"],
+                    set_=dict(
+                        merchant_clean=merchant_clean,
+                        category_ynab=category_ynab,
+                        category_dashboard=cat_result.category,
+                        category_source=cat_result.source,
+                        ynab_approved=tx.get("approved", False),
+                        notes=tx.get("memo"),
+                    ),
+                )
+                await db.execute(stmt)
                 results["synced"] += 1
 
             except Exception as e:
@@ -217,6 +275,7 @@ class YNABService:
                     {"transaction_id": tx.get("id"), "error": str(e)}
                 )
 
+        await db.commit()
         return results
 
     async def get_oldest_transaction_date(self) -> str | None:
