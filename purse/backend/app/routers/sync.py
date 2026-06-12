@@ -18,5 +18,11 @@ async def trigger_sync(db: AsyncSession = Depends(get_db)):
 @router.get("/status")
 async def sync_status():
     """Return the status of the last sync."""
-    # Full implementation in scheduler phase
-    return {"status": "never_synced", "last_sync": None}
+    from sync.scheduler import scheduler
+    job = scheduler.get_job("ynab_sync")
+    next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+    return {
+        "status": "scheduled",
+        "next_sync": next_run,
+        "last_sync": None,
+    }

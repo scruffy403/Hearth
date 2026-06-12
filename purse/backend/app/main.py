@@ -2,11 +2,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.config import settings
 from app.routers import sync
+from sync.scheduler import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup
+    start_scheduler()
     yield
+    # Shutdown
+    stop_scheduler()
 
 
 app = FastAPI(
