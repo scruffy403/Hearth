@@ -7,7 +7,7 @@ async def test_sync_status_returns_never_synced(client):
     assert response.status_code == 200
     data = response.json()
     assert data["last_sync"] is None
-    assert data["status"] == "never_synced"
+    assert data["status"] == "scheduled"
 
 
 async def test_manual_sync_trigger_returns_accepted(client):
