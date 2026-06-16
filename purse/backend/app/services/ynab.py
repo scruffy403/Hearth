@@ -173,6 +173,7 @@ class YNABService:
     async def sync_transactions(
             self,
             db: AsyncSession,
+            ml_service: "MLService | None" = None,
     ) -> dict[str, Any]:
         """
         Fetch recent transactions from YNAB and upsert into the database.
@@ -184,12 +185,13 @@ class YNABService:
         Returns:
             Summary dict with counts and any errors
         """
+
         from sqlalchemy import select
         from sqlalchemy.dialects.postgresql import insert
 
         from app.models.transaction import Transaction
         from app.services.payee_normalizer import PayeeNormalizer
-        from app.services.categorization import CategorizationService
+        from app.services.categorization import CategorizationService, CategoryResult
         from app.models.merchant_override import MerchantOverride
 
         normalizer = PayeeNormalizer()
@@ -241,6 +243,21 @@ class YNABService:
                     amount=float(amount),
                 )
 
+                # If rule-based returned Other, try ML
+                ml_confidence = None
+                if cat_result.category == "Other" and ml_service is not None and ml_service.is_trained:
+                    ml_prediction = ml_service.predict(merchant_clean)
+                    if (
+                            ml_prediction.source == "ml"
+                            and ml_prediction.category != "Other"
+                            and ml_prediction.confidence >= settings.ml_low_confidence_threshold
+                    ):
+                        cat_result = CategoryResult(
+                            category=ml_prediction.category,
+                            source="ml",
+                        )
+                        ml_confidence = Decimal(str(round(ml_prediction.confidence, 4)))
+
                 # Upsert — insert or update on conflict with ynab_transaction_id
                 stmt = insert(Transaction).values(
                     ynab_transaction_id=tx["id"],
@@ -252,7 +269,7 @@ class YNABService:
                     category_ynab=category_ynab,
                     category_dashboard=cat_result.category,
                     category_source=cat_result.source,
-                    ml_confidence=None,
+                    ml_confidence=ml_confidence,
                     ynab_approved=tx.get("approved", False),
                     is_transfer=False,
                     notes=tx.get("memo"),
@@ -263,6 +280,7 @@ class YNABService:
                         category_ynab=category_ynab,
                         category_dashboard=cat_result.category,
                         category_source=cat_result.source,
+                        ml_confidence=ml_confidence,
                         ynab_approved=tx.get("approved", False),
                         notes=tx.get("memo"),
                     ),

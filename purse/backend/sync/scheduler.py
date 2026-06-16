@@ -6,17 +6,18 @@ from app.database import AsyncSessionLocal
 from app.services.ynab import YNABService
 
 scheduler = AsyncIOScheduler()
+_app = None
 
 
 async def _run_ynab_sync() -> None:
-    """
-    Scheduled YNAB sync job.
-    Creates its own DB session since it runs outside the request cycle.
-    """
     ynab_service = YNABService()
+    ml_service = getattr(_app.state, "ml_service", None) if _app else None
     async with AsyncSessionLocal() as db:
         try:
-            result = await ynab_service.sync_transactions(db=db)
+            result = await ynab_service.sync_transactions(
+                db=db,
+                ml_service=ml_service,
+            )
             print(
                 f"Scheduled sync complete: "
                 f"fetched={result['fetched']} "
@@ -27,7 +28,9 @@ async def _run_ynab_sync() -> None:
             print(f"Scheduled sync failed: {e}")
 
 
-def start_scheduler() -> None:
+def start_scheduler(app=None) -> None:
+    global _app
+    _app = app
     scheduler.add_job(
         _run_ynab_sync,
         trigger=IntervalTrigger(hours=settings.sync_interval_hours),

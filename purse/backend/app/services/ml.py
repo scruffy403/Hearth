@@ -144,3 +144,14 @@ class MLService:
     @property
     def is_trained(self) -> bool:
         return self._pipeline is not None
+
+# Module-level singleton — shared across the application
+_ml_service_instance: MLService | None = None
+
+
+def get_ml_service() -> MLService:
+    """Return the application-level MLService singleton."""
+    global _ml_service_instance
+    if _ml_service_instance is None:
+        _ml_service_instance = MLService(min_samples=5)
+    return _ml_service_instance

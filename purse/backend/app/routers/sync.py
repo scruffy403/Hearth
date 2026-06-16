@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -9,9 +9,13 @@ ynab_service = YNABService()
 
 
 @router.post("/trigger", status_code=202)
-async def trigger_sync(db: AsyncSession = Depends(get_db)):
+async def trigger_sync(request: Request, db: AsyncSession = Depends(get_db)):
     """Manually trigger a YNAB sync."""
-    result = await ynab_service.sync_transactions(db=db)
+    ml_service = getattr(request.app.state, "ml_service", None)
+    result = await ynab_service.sync_transactions(
+        db=db,
+        ml_service=ml_service,
+    )
     return {"status": "sync_completed", "result": result}
 
 
