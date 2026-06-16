@@ -279,11 +279,15 @@ class PayeeNormalizer:
         s0 = s.lstrip("\ufeff\u200b")  # BOM / zero-width safety
 
         if s0[:2].upper() == "SQ":
-            # Handles: "SQ *FOO", "SQ*FOO", "SQ  *  FOO", "SQ FOO"
-            if "*" in s0:
-                s = s0.split("*", 1)[1].strip()
-            else:
-                s = s0[2:].strip(" -")
+            remainder = s0[2:]
+            # Only treat as Square prefix if followed by space, *, or dash
+            # 'SQ *FOO', 'SQ*FOO', 'SQ FOO', 'SQ-FOO' are Square prefixes
+            # 'Squire's', 'Square Mile' etc are not
+            if remainder.startswith(("*", " ", "-")):
+                if "*" in s0:
+                    s = s0.split("*", 1)[1].strip()
+                else:
+                    s = remainder.strip(" -")
 
         # -----------------------------
         # 3.1 Hard-coded special cases

@@ -20,3 +20,14 @@ def test_detects_transfer():
 
 def test_handles_empty_string():
     assert PayeeNormalizer().normalize("") == ""
+
+def test_squires_not_stripped_as_sq_prefix():
+    """
+    Regression test: 'Squire's Garden Centre' should not have 'Sq' stripped
+    as if it were a Square payment processor prefix.
+    The SQ prefix stripper should only match when SQ is followed by
+    a space, asterisk, or dash — not when it's part of a word.
+    """
+    result = PayeeNormalizer().normalize("Squire's Garden Centre")
+    assert "quire" in result.lower()
+    assert result != "uire's Garden Centre"
