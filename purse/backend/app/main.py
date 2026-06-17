@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.models.transaction import Transaction
-from app.routers import sync, ml as ml_router, transactions, categories
+from app.routers import sync, ml as ml_router, transactions, categories, anomalies
 from app.services.ml import MLService
 from sync.scheduler import start_scheduler, stop_scheduler
 
@@ -56,6 +56,7 @@ app.include_router(sync.router)
 app.include_router(ml_router.router)
 app.include_router(transactions.router)
 app.include_router(categories.router)
+app.include_router(anomalies.router)
 
 
 @app.get("/api/v1/health")
