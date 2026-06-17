@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from pydantic import BaseModel
+from datetime import date
 import uuid
 
 from app.database import get_db
@@ -15,6 +17,90 @@ router = APIRouter(prefix="/api/v1/transactions", tags=["transactions"])
 class CategoryUpdate(BaseModel):
     category: str
     save_as_merchant_rule: bool = True
+
+def transaction_to_dict(tx: Transaction) -> dict:
+    """Shared serialiser for transaction responses."""
+    return {
+        "id": str(tx.id),
+        "date": tx.date.isoformat(),
+        "amount": float(tx.amount),
+        "currency": tx.currency,
+        "merchant_raw": tx.merchant_raw,
+        "merchant_clean": tx.merchant_clean,
+        "category_ynab": tx.category_ynab,
+        "category_dashboard": tx.category_dashboard,
+        "category_source": tx.category_source,
+        "ml_confidence": float(tx.ml_confidence) if tx.ml_confidence else None,
+        "ynab_approved": tx.ynab_approved,
+        "is_transfer": tx.is_transfer,
+        "notes": tx.notes,
+    }
+
+
+@router.get("")
+async def list_transactions(
+    from_date: Optional[date] = Query(None),
+    to_date: Optional[date] = Query(None),
+    categories: Optional[list[str]] = Query(None),
+    limit: int = Query(500, le=2000),
+    offset: int = Query(0),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    List transactions with optional filtering.
+    Defaults to 500 most recent; use limit/offset to paginate.
+    """
+    filters = []
+    if from_date:
+        filters.append(Transaction.date >= from_date)
+    if to_date:
+        filters.append(Transaction.date <= to_date)
+    if categories:
+        filters.append(Transaction.category_dashboard.in_(categories))
+
+    stmt = (
+        select(Transaction)
+        .where(and_(*filters) if filters else True)
+        .order_by(Transaction.date.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    transactions = result.scalars().all()
+    return [transaction_to_dict(tx) for tx in transactions]
+
+
+@router.get("/low-confidence")
+async def get_low_confidence_transactions(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return ML-categorised transactions below the confidence threshold.
+    These are surfaced for manual review — the active learning queue.
+    """
+    result = await db.execute(
+        select(Transaction).where(
+            Transaction.category_source == "ml",
+            Transaction.ml_confidence < settings.ml_low_confidence_threshold,
+        ).order_by(Transaction.ml_confidence.asc())
+    )
+    transactions = result.scalars().all()
+    return [transaction_to_dict(tx) for tx in transactions]
+
+
+@router.get("/{transaction_id}")
+async def get_transaction(
+    transaction_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a single transaction by ID."""
+    result = await db.execute(
+        select(Transaction).where(Transaction.id == transaction_id)
+    )
+    tx = result.scalar_one_or_none()
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return transaction_to_dict(tx)
 
 
 @router.patch("/{transaction_id}/category")

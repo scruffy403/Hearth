@@ -87,3 +87,126 @@ async def test_patch_nonexistent_transaction_returns_404(client, db_session):
         json={"category": "Groceries", "save_as_merchant_rule": False}
     )
     assert response.status_code == 404
+
+
+async def test_list_transactions_returns_all(client, db_session):
+    from app.models.transaction import Transaction
+    from datetime import date
+    from decimal import Decimal
+
+    # Create two test transactions
+    for merchant in ["Tesco", "Costa Coffee"]:
+        tx = Transaction(
+            ynab_transaction_id=f"test-{uuid.uuid4()}",
+            date=date(2024, 1, 15),
+            amount=Decimal("-25.00"),
+            merchant_raw=merchant,
+            merchant_clean=merchant,
+            category_ynab="Groceries",
+            category_dashboard="Groceries",
+            category_source="ynab",
+            ynab_approved=True,
+            is_transfer=False,
+        )
+        db_session.add(tx)
+    await db_session.flush()
+
+    response = await client.get("/api/v1/transactions")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+
+
+async def test_list_transactions_filters_by_category(client, db_session):
+    from app.models.transaction import Transaction
+    from datetime import date
+    from decimal import Decimal
+
+    for category in ["Groceries", "Eating Out"]:
+        tx = Transaction(
+            ynab_transaction_id=f"test-{uuid.uuid4()}",
+            date=date(2024, 1, 15),
+            amount=Decimal("-25.00"),
+            merchant_raw="Test Merchant",
+            merchant_clean="Test Merchant",
+            category_ynab=category,
+            category_dashboard=category,
+            category_source="ynab",
+            ynab_approved=True,
+            is_transfer=False,
+        )
+        db_session.add(tx)
+    await db_session.flush()
+
+    response = await client.get(
+        "/api/v1/transactions",
+        params={"categories": ["Groceries"]}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["category_dashboard"] == "Groceries"
+
+
+async def test_list_transactions_filters_by_date_range(client, db_session):
+    from app.models.transaction import Transaction
+    from datetime import date
+    from decimal import Decimal
+
+    for tx_date in [date(2024, 1, 15), date(2024, 3, 15)]:
+        tx = Transaction(
+            ynab_transaction_id=f"test-{uuid.uuid4()}",
+            date=tx_date,
+            amount=Decimal("-25.00"),
+            merchant_raw="Tesco",
+            merchant_clean="Tesco",
+            category_ynab="Groceries",
+            category_dashboard="Groceries",
+            category_source="ynab",
+            ynab_approved=True,
+            is_transfer=False,
+        )
+        db_session.add(tx)
+    await db_session.flush()
+
+    response = await client.get(
+        "/api/v1/transactions",
+        params={"from_date": "2024-01-01", "to_date": "2024-02-01"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["date"] == "2024-01-15"
+
+
+async def test_get_single_transaction(client, db_session):
+    from app.models.transaction import Transaction
+    from datetime import date
+    from decimal import Decimal
+
+    tx = Transaction(
+        ynab_transaction_id=f"test-{uuid.uuid4()}",
+        date=date(2024, 1, 15),
+        amount=Decimal("-25.00"),
+        merchant_raw="Tesco",
+        merchant_clean="Tesco",
+        category_ynab="Groceries",
+        category_dashboard="Groceries",
+        category_source="ynab",
+        ynab_approved=True,
+        is_transfer=False,
+    )
+    db_session.add(tx)
+    await db_session.flush()
+    await db_session.refresh(tx)
+
+    response = await client.get(f"/api/v1/transactions/{tx.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["merchant_clean"] == "Tesco"
+    assert data["category_dashboard"] == "Groceries"
+
+
+async def test_get_nonexistent_transaction_returns_404(client, db_session):
+    response = await client.get(f"/api/v1/transactions/{uuid.uuid4()}")
+    assert response.status_code == 404
