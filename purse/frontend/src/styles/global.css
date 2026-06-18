@@ -1,0 +1,51 @@
+@import "./colors.css";
+@import "./typography.css";
+@import "./spacing.css";
+
+/* ==========================================================================
+   Base reset — minimal, since most typography is handled in typography.css
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--hearth-ember);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Visible keyboard focus throughout — per the frontend-design quality floor */
+:focus-visible {
+  outline: 2px solid var(--hearth-brass);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}

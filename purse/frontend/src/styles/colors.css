@@ -1,0 +1,55 @@
+/* ==========================================================================
+   Hearth Purse — Colour Tokens
+
+   Palette philosophy: warm, household-ledger feeling rather than clinical
+   fintech. Ember/brass/moss as a three-accent system rather than a single
+   terracotta note. See HEARTH_PURSE_SPEC.md Section 13 for the full
+   "does this feel like it belongs in our home?" design philosophy.
+   ========================================================================== */
+
+:root {
+  /* --- Base surfaces --- */
+  --hearth-paper: #f2ebdd;        /* primary background — aged ledger paper */
+  --hearth-paper-raised: #f8f3e8; /* slightly lighter, for raised/card surfaces */
+  --hearth-paper-deep: #e8ddc8;   /* slightly darker, for recessed/inset areas */
+
+  /* --- Ink / text --- */
+  --hearth-ink: #2e2622;          /* primary text — warm near-black, not pure black */
+  --hearth-ink-soft: #4a4138;     /* secondary text — warm charcoal */
+  --hearth-ink-faint: #8b7f6f;    /* tertiary text, placeholders, captions */
+
+  /* --- Accents --- */
+  --hearth-ember: #b5502e;        /* expense / spend signal, primary accent */
+  --hearth-ember-soft: #c97a5c;   /* lighter ember for hover/secondary use */
+  --hearth-brass: #9c7a3c;        /* highlights, active states, secondary accent */
+  --hearth-brass-soft: #c2a571;   /* lighter brass for subtle fills */
+  --hearth-moss: #5c6e4f;         /* income / positive signal — not bank-green */
+  --hearth-moss-soft: #7f9270;    /* lighter moss for hover/secondary use */
+
+  /* --- Lines / structure --- */
+  --hearth-rule: #d6c9ab;         /* hairline rules between ledger rows */
+  --hearth-rule-strong: #b9a87f;  /* slightly stronger rule, section dividers */
+
+  /* --- Semantic aliases (so components don't hardcode palette names) --- */
+  --color-bg: var(--hearth-paper);
+  --color-surface: var(--hearth-paper-raised);
+  --color-surface-inset: var(--hearth-paper-deep);
+  --color-text: var(--hearth-ink);
+  --color-text-soft: var(--hearth-ink-soft);
+  --color-text-faint: var(--hearth-ink-faint);
+  --color-expense: var(--hearth-ember);
+  --color-income: var(--hearth-moss);
+  --color-accent: var(--hearth-brass);
+  --color-border: var(--hearth-rule);
+  --color-border-strong: var(--hearth-rule-strong);
+}
+
+/* Respect reduced motion preference throughout the app */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

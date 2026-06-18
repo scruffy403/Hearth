@@ -1,0 +1,91 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-header {
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-strong);
+  /* In standalone PWA mode on iOS, the status bar area overlaps content
+     unless we respect the safe-area inset — this pads the header down
+     below the notch/dynamic island rather than letting the title sit
+     under it. */
+  padding-top: env(safe-area-inset-top);
+}
+
+.app-header__inner {
+  max-width: var(--content-width-wide);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-6) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.app-header__title {
+  font-size: var(--text-2xl);
+  margin: 0;
+  color: var(--hearth-ember);
+}
+
+.app-nav {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.app-nav__link {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-soft);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 3px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.app-nav__link:hover {
+  color: var(--hearth-ember);
+  text-decoration: none;
+}
+
+.app-nav__link--active {
+  color: var(--hearth-ember);
+  border-bottom-color: var(--hearth-ember);
+}
+
+.app-main {
+  flex: 1;
+  max-width: var(--content-width-wide);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-6);
+  padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
+}
+
+/* Mobile: navigation becomes a horizontal scroll, app feels more like
+   a native tab bar at the top */
+@media (max-width: 640px) {
+  .app-header__inner {
+    padding: var(--space-4) var(--space-4) 0;
+  }
+
+  .app-nav {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .app-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-nav__link {
+    padding: var(--space-3) var(--space-4);
+    white-space: nowrap;
+  }
+
+  .app-main {
+    padding: var(--space-4);
+  }
+}

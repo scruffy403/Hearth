@@ -1,0 +1,83 @@
+/* ==========================================================================
+   Hearth Purse — Typography Tokens
+
+   Three-role system, leaning into the ledger-book concept:
+     - Fraunces  — display serif, carries personality. Headings, category
+                   names, signature moments. Used with intention, not just h1s.
+     - Spectral  — body serif, for prose and reading. Month-summary sentences,
+                   descriptions, empty states. The "ledger book" feeling.
+     - Inter     — utility sans, reserved for dense numeric columns where
+                   tabular figures and unambiguous digit shapes matter most.
+
+   Loaded via Google Fonts in index.html — see font weights referenced there.
+   ========================================================================== */
+
+:root {
+  /* --- Font families --- */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Spectral", Georgia, serif;
+  --font-data: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* --- Type scale (rem-based, 1rem = 16px) --- */
+  --text-xs: 0.75rem;     /* 12px — captions, fine print */
+  --text-sm: 0.875rem;    /* 14px — secondary labels */
+  --text-base: 1rem;      /* 16px — body text */
+  --text-lg: 1.125rem;    /* 18px — emphasised body */
+  --text-xl: 1.375rem;    /* 22px — section headings */
+  --text-2xl: 1.75rem;    /* 28px — page headings */
+  --text-3xl: 2.25rem;    /* 36px — hero/display moments */
+  --text-4xl: 3rem;       /* 48px — large hero numbers, rare use */
+
+  /* --- Line heights — generous, "sized for reading" per the brief --- */
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-relaxed: 1.6;
+  --leading-loose: 1.8;
+
+  /* --- Weights --- */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* --- Letter spacing --- */
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text);
+  font-weight: var(--weight-regular);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+}
+
+h1 { font-size: var(--text-3xl); }
+h2 { font-size: var(--text-2xl); }
+h3 { font-size: var(--text-xl); }
+h4 { font-size: var(--text-lg); }
+
+/* Utility class for the numeric/data role — apply explicitly where needed,
+   e.g. transaction amounts, dense tables. Not a global default. */
+.font-data,
+.numeral {
+  font-family: var(--font-data);
+  font-feature-settings: "tnum" 1; /* tabular numerals for column alignment */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Category names and similar small moments of character carry the
+   display face even outside headings, per the design brief */
+.font-display {
+  font-family: var(--font-display);
+}

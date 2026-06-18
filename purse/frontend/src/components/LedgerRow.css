@@ -1,0 +1,77 @@
+.ledger-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ledger-row:last-child {
+  border-bottom: none;
+}
+
+.ledger-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ledger-row__label {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-row__meta {
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+}
+
+.ledger-row__figures {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.ledger-row__budget {
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-row__budget--over {
+  color: var(--hearth-ember);
+}
+
+.ledger-row__amount {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  min-width: 5.5rem;
+  text-align: right;
+}
+
+.ledger-row__amount--expense {
+  color: var(--color-expense);
+}
+
+.ledger-row__amount--income {
+  color: var(--color-income);
+}
+
+@media (max-width: 480px) {
+  .ledger-row__label {
+    font-size: var(--text-base);
+  }
+
+  .ledger-row__amount {
+    font-size: var(--text-base);
+    min-width: 4.5rem;
+  }
+}

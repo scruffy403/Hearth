@@ -95,22 +95,31 @@ async def categories_trends(
 async def categories_merchants(
     category: str = Query(...),
     limit: int = Query(10, le=50),
+    from_date: Optional[date] = Query(None),
+    to_date: Optional[date] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Return top merchants by total spend within a category.
-    Used to answer 'where is my Groceries money actually going'.
+    Return top merchants by total spend within a category, optionally
+    scoped to a date range. Used to answer 'where is my Groceries
+    money actually going' for a given period.
     """
+    filters = [
+        Transaction.category_dashboard == category,
+        Transaction.amount < 0,
+    ]
+    if from_date:
+        filters.append(Transaction.date >= from_date)
+    if to_date:
+        filters.append(Transaction.date <= to_date)
+
     stmt = (
         select(
             Transaction.merchant_clean,
             func.sum(Transaction.amount).label("total"),
             func.count(Transaction.id).label("transaction_count"),
         )
-        .where(
-            Transaction.category_dashboard == category,
-            Transaction.amount < 0,
-        )
+        .where(and_(*filters))
         .group_by(Transaction.merchant_clean)
         .order_by(func.sum(Transaction.amount))
         .limit(limit)

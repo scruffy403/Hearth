@@ -1,0 +1,137 @@
+.budget-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.budget-row:last-child {
+  border-bottom: none;
+}
+
+.budget-row__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.budget-row__label {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+
+.budget-row__amount-button {
+  font-family: var(--font-data);
+  font-size: var(--text-base);
+  background: none;
+  border: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  transition: background-color 0.15s ease;
+}
+
+.budget-row__amount-button:hover {
+  background-color: var(--color-surface-inset);
+}
+
+.budget-row__of {
+  color: var(--color-text-faint);
+  font-size: var(--text-sm);
+}
+
+.budget-row__add-budget {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--hearth-brass);
+  background: none;
+  border: 1px dashed var(--hearth-brass);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+}
+
+.budget-row__add-budget:hover {
+  background-color: var(--hearth-brass-soft);
+  color: var(--hearth-ink);
+}
+
+.budget-row__edit-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.budget-row__currency-prefix {
+  font-family: var(--font-data);
+  color: var(--color-text-faint);
+}
+
+.budget-row__input {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-base);
+  width: 6rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--hearth-brass);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.budget-row__save {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--hearth-paper-raised);
+  background-color: var(--hearth-brass);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+}
+
+.budget-row__save:hover {
+  background-color: var(--hearth-brass-soft);
+}
+
+/* The track represents "100% = budgeted amount". Within-budget fill sits
+   inside it; the overage segment is allowed to push past the track's own
+   rounded edge, so going over budget visually reads as "spilling past
+   the edge" rather than just a colour change. */
+.budget-row__track {
+  display: flex;
+  align-items: stretch;
+  height: 0.625rem;
+  background-color: var(--color-surface-inset);
+  border-radius: var(--radius-sm);
+  overflow: visible;
+}
+
+.budget-row__fill {
+  height: 100%;
+}
+
+.budget-row__fill--within {
+  background-color: var(--hearth-brass);
+  border-radius: var(--radius-sm);
+}
+
+.budget-row__fill--within:not(:only-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.budget-row__fill--over {
+  background-color: var(--hearth-ember);
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.budget-row__unbudgeted-note {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+  font-style: italic;
+}

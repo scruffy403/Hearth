@@ -1,0 +1,82 @@
+.transactions-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.transactions-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.merchant-filter-banner {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-soft);
+  background-color: var(--color-surface-inset);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.merchant-filter-banner strong {
+  font-family: var(--font-display);
+  color: var(--color-text);
+}
+
+.merchant-filter-banner button {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--hearth-ember);
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: auto;
+}
+
+.merchant-filter-banner button:hover {
+  text-decoration: underline;
+}
+
+.transactions-review-toggle {
+  align-self: flex-start;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--hearth-brass);
+  background-color: transparent;
+  border: 1px dashed var(--hearth-brass);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  transition: all 0.15s ease;
+}
+
+.transactions-review-toggle:hover {
+  background-color: var(--hearth-brass-soft);
+  color: var(--hearth-ink);
+}
+
+.transactions-review-toggle--active {
+  background-color: var(--hearth-brass);
+  border-style: solid;
+  color: var(--hearth-paper-raised);
+}
+
+.ledger {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-5);
+  box-shadow: var(--shadow-soft);
+}
+
+.transactions-empty {
+  font-family: var(--font-body);
+  color: var(--color-text-faint);
+  padding: var(--space-4) var(--space-1);
+  margin: 0;
+}

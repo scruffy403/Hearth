@@ -119,6 +119,7 @@ class PayeeNormalizer:
         "chatgpt subscription": "ChatGPT Subscription",
 
         # --- Charities / donations ---
+        "unicef": "Unicef UK",
         "unicef uk": "Unicef UK",
         "cancer research": "Cancer Research UK",
         "scripture union": "Scripture Union",
@@ -126,7 +127,10 @@ class PayeeNormalizer:
         "wikimedia": "Wikimedia Foundation",
         "british heart foundation": "British Heart Foundation",
 
-        # --- National Trust / heritage / museums ---
+        # --- Venues / theatres / cinemas ---
+        "new victoria theatre": "New Victoria Theatre",
+        "nova cinema": "Nova Cinema",
+        "nova cinema woking": "Nova Cinema",
         "national trust": "National Trust",
         "national trust ham house and garden": "National Trust (Ham House & Garden)",
         "science industry museum r": "Science and Industry Museum",
@@ -161,13 +165,48 @@ class PayeeNormalizer:
         "torbaycouncil": "Torbay Council",
 
         # --- Misc / other common merchants in your data ---
+        "sainsbury s": "Sainsbury's",   # SAINSBURY'S -> simplify_key -> 'sainsbury s'
+        "sainsburys s": "Sainsbury's",  # older SAINSBURYS variant
+        "dvla": "DVLA",
+        "dvla vehicle tax": "DVLA",
+        "nulbc council tax": "NULBC Council Tax",
+        "rna corporation": "RNA Corporation",
+        "rna": "RNA Corporation",
+        "giffgaff": "Giffgaff",
+        "milk and more": "Milk & More",
+        "milk more": "Milk & More",
+        "milk more recur": "Milk & More",
+        "betterhelp": "BetterHelp",
+        "bh betterhelp": "BetterHelp",
+        "keele university": "Keele University",
+        "university of keele": "Keele University",
+        "university of keel": "Keele University",
+        "keele university campus s": "Keele University",
+        "morrisons petrol": "Morrisons Petrol Station",
+        "morrison petrol": "Morrisons Petrol Station",
+        "morrison": "Morrisons",
+        "pets at home": "Pets at Home",
+        "well pharmacy": "Well Pharmacy",
+        "santander bank": "Santander Bank",
+        "legal general group": "Legal & General",
+        "disney plus": "Disney+",
+        "prime video": "Amazon Prime Video",
+        "severn trent water": "Severn Trent Water",
+        "animal health care veterinary": "Animal Health Care Veterinary",
+        "bulb": "Bulb Energy",
+        "schoolmoney": "SchoolMoney",
+        "udemy online courses": "Udemy",
+        "udemy": "Udemy",
+        "m6 toll": "M6 Toll",
+        "martin mccoll": "Martin McColl",
+        "brookwood food": "Brookwood Food",
         "waterfront cafe": "Waterfront Cafe",
         "waterfront caf": "Waterfront Cafe",
         "waterfront cafes": "Waterfront Cafe",
         "st peters hospital multi storey car park": "St. Peter's Hospital Car Park",
         "school photography co": "School Photography Company",
         "gear4music limited": "Gear4music",
-        "sportsbikeshop ltd": "SPORTSBIKESHOP",
+        "sportsbikeshop ltd": "Sportsbikeshop",
         "military mart": "Military Mart",
         "minerva fabrics ltd": "Minerva Fabrics",
         "minerva fabrics": "Minerva Fabrics",
@@ -176,6 +215,30 @@ class PayeeNormalizer:
         "omaze uk": "Omaze",
         "omaze": "Omaze",
     }
+
+    # Corporate suffixes to strip when they appear as trailing words.
+    # 'LI' is excluded deliberately — it appears as a truncated suffix
+    # in some bank feeds (e.g. 'EUROSTAR INTERNATIONAL LI') but is also
+    # a common legitimate word ending, so stripping it would cause false
+    # positives. Those are handled via the canonical map instead.
+    CORPORATE_SUFFIXES = {
+        "limited", "ltd", "plc", "inc", "corp",
+        "corporation", "llc", "llp", "lp",
+    }
+
+    def strip_corporate_suffixes(self, name: str) -> str:
+        """
+        Remove trailing corporate entity suffixes (Limited, Ltd, PLC, etc.)
+        from merchant names, since they add noise without adding meaning
+        to the display name.
+
+        Only strips from the end, and only whole words — 'UNLIMITED' is not
+        affected by stripping 'LIMITED', for example.
+        """
+        tokens = name.split()
+        while tokens and tokens[-1].lower().rstrip(".") in self.CORPORATE_SUFFIXES:
+            tokens.pop()
+        return " ".join(tokens)
 
     def simplify_key(self, name: str) -> str:
         """
@@ -215,13 +278,14 @@ class PayeeNormalizer:
             r"^SUMUP\s*\*",  # SUMUP *WAFFLE STATION LI
             r"^SUMUP\s+",  # SUMUP foo
             r"^SUMUP_",  # SUMUP_*FOO
-            r"^SP\s*\*?",  # SP ATTIRECO / SP*ATTIRECO
+            r"^SP\s+\*?",  # SP *ATTIRECO / SP ATTIRECO (require space after SP)
             r"^NY[AX]\s*\*",  # NYA* / NYX*
             r"^WP\*",  # WP*Woking Gymnastics C
             r"^EB\s*\*",  # EB *UK PANDEMIC SCIENC
             r"^PAYPAL\s*\*",  # PAYPAL *JD MUSIC
             r"^VMS\*",  # VMS*iPayimpact.co.uk
             r"^STP\*V\*",  # STP*V*theliven com
+            r"^BH\*",      # BH* BETTERHELP
         ]
         changed = True
         s = name
@@ -305,7 +369,11 @@ class PayeeNormalizer:
             return "Cheque"
 
         # Non-sterling / FX fees
-        if "non-sterling transaction fee" in lower or "foreign currency transaction fee" in lower:
+        if (
+            "non-sterling transaction fee" in lower
+            or "non sterling transaction fee" in lower
+            or "foreign currency transaction fee" in lower
+        ):
             return "Non-Sterling Fee"
 
         # The Pirbright Institute (all PIRB codes etc.)
@@ -418,6 +486,20 @@ class PayeeNormalizer:
         # 3.6 Final tidy and return
         # -----------------------------
         s = self.tidy_text(s)
+
+        # Strip corporate suffixes (LIMITED, LTD, PLC, etc.) from merchants
+        # that didn't match the canonical map. Done after the canonical lookup
+        # so that entries like 'GEAR4MUSIC LIMITED' -> 'Gear4music' still work
+        # via the map rather than naive suffix stripping.
+        s = self.strip_corporate_suffixes(s)
+        s = self.tidy_text(s)  # clean up any trailing whitespace after strip
+
+        # Apply title-casing as a final fallback for merchants that are still
+        # ALL CAPS after all processing -- all-caps names come from bank feeds
+        # and read poorly in the UI. Named merchants in the canonical map
+        # already have correct casing and won't reach this point.
+        if s == s.upper() and len(s) > 1:
+            s = s.title()
 
         # Ensure we don’t accidentally return empty after normalisation
         if not s:

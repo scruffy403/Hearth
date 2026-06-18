@@ -1,0 +1,28 @@
+.budgets-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--content-width);
+}
+
+.budgets-page__subtitle {
+  font-family: var(--font-body);
+  color: var(--color-text-soft);
+  margin: 0;
+  max-width: 48ch;
+}
+
+.ledger {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-5);
+  box-shadow: var(--shadow-soft);
+}
+
+.budgets-empty {
+  font-family: var(--font-body);
+  color: var(--color-text-faint);
+  padding: var(--space-4) var(--space-1);
+  margin: 0;
+}

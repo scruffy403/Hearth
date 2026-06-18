@@ -1,0 +1,44 @@
+.trend-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.trend-bar-row {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr 6rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.trend-bar-row__month {
+  font-size: var(--text-sm);
+  color: var(--color-text-soft);
+  white-space: nowrap;
+}
+
+.trend-bar-row__track {
+  height: 1.25rem;
+  background-color: var(--color-surface-inset);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.trend-bar-row__fill {
+  height: 100%;
+  background-color: var(--hearth-ember-soft);
+  border-radius: var(--radius-sm);
+  transition: width 0.3s ease;
+}
+
+.trend-bar-row__amount {
+  font-size: var(--text-sm);
+  text-align: right;
+  color: var(--color-text);
+}
+
+@media (max-width: 480px) {
+  .trend-bar-row {
+    grid-template-columns: 3rem 1fr 4.5rem;
+  }
+}

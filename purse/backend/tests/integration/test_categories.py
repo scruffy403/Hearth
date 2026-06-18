@@ -88,14 +88,15 @@ async def test_categories_merchants_returns_top_merchants(client, db_session):
     from app.models.transaction import Transaction
 
     transactions = [
-        ("Tesco", Decimal("-50.00")),
-        ("Tesco", Decimal("-30.00")),
-        ("Sainsbury's", Decimal("-20.00")),
+        (date(2024, 1, 15), "Tesco", Decimal("-50.00")),
+        (date(2024, 1, 15), "Tesco", Decimal("-30.00")),
+        (date(2024, 1, 15), "Sainsbury's", Decimal("-20.00")),
+        (date(2020, 1, 15), "Old Merchant", Decimal("-999.00")),  # out of range
     ]
-    for merchant, amount in transactions:
+    for tx_date, merchant, amount in transactions:
         tx = Transaction(
             ynab_transaction_id=f"test-{uuid.uuid4()}",
-            date=date(2024, 1, 15),
+            date=tx_date,
             amount=amount,
             merchant_raw=merchant,
             merchant_clean=merchant,
@@ -110,10 +111,17 @@ async def test_categories_merchants_returns_top_merchants(client, db_session):
 
     response = await client.get(
         "/api/v1/categories/merchants",
-        params={"category": "Groceries"}
+        params={
+            "category": "Groceries",
+            "from_date": "2024-01-01",
+            "to_date": "2024-02-01",
+        },
     )
     assert response.status_code == 200
     data = response.json()
+
+    merchant_names = [m["merchant"] for m in data]
+    assert "Old Merchant" not in merchant_names
 
     tesco = next(m for m in data if m["merchant"] == "Tesco")
     assert tesco["total"] == 80.00
