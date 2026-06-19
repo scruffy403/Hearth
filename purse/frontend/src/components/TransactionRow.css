@@ -62,6 +62,24 @@
   border-style: dashed;
 }
 
+/* High-confidence ML categorisation — subtle brass border to indicate
+   the category came from the model, without drawing as much attention
+   as the low-confidence dashed variant */
+.transaction-row__category-button--ml {
+  border-color: var(--hearth-brass-soft);
+}
+
+.transaction-row__ml-dot {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background-color: var(--hearth-brass-soft);
+  flex-shrink: 0;
+  display: inline-block;
+  margin-left: var(--space-1);
+  vertical-align: middle;
+}
+
 .transaction-row__flag {
   font-size: var(--text-xs);
   font-style: italic;

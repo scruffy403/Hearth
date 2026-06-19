@@ -1,6 +1,7 @@
 import { useCurrentMonthSummary, useRecentTransactions, useBudgetsVsActual } from "./useOverviewData";
 import { formatCurrency, formatDateShort, formatMonthName } from "../lib/format";
 import { LedgerRow } from "../components/LedgerRow";
+import { MLHealthCard } from "../components/MLHealthCard";
 import "./OverviewPage.css";
 
 function buildSummarySentence(
@@ -96,6 +97,8 @@ export function OverviewPage() {
           )}
         </div>
       </section>
+
+      <MLHealthCard />
     </div>
   );
 }

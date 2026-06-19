@@ -24,10 +24,17 @@ export function TransactionRow({
     ? "transaction-row__amount--income"
     : "transaction-row__amount--expense";
 
+  const isMLCategorized = transaction.category_source === "ml";
   const isLowConfidence =
-    transaction.category_source === "ml" &&
+    isMLCategorized &&
     transaction.ml_confidence !== null &&
     transaction.ml_confidence < 0.6;
+
+  const categoryButtonClass = isLowConfidence
+    ? "transaction-row__category-button transaction-row__category-button--low-confidence"
+    : isMLCategorized
+    ? "transaction-row__category-button transaction-row__category-button--ml"
+    : "transaction-row__category-button";
 
   function handleSelect(category: string) {
     onUpdateCategory(category, saveAsRule);
@@ -80,16 +87,19 @@ export function TransactionRow({
         ) : (
           <button
             type="button"
-            className={
-              isLowConfidence
-                ? "transaction-row__category-button transaction-row__category-button--low-confidence"
-                : "transaction-row__category-button"
-            }
+            className={categoryButtonClass}
             onClick={() => setIsEditing(true)}
-            title="Click to change category"
+            title={
+              isMLCategorized && transaction.ml_confidence !== null
+                ? `ML categorised · ${Math.round(transaction.ml_confidence * 100)}% confidence`
+                : "Click to change category"
+            }
           >
             {transaction.category_dashboard ?? "Uncategorised"}
             {isLowConfidence && <span className="transaction-row__flag">needs review</span>}
+            {isMLCategorized && !isLowConfidence && (
+              <span className="transaction-row__ml-dot" aria-hidden="true" />
+            )}
           </button>
         )}
       </div>

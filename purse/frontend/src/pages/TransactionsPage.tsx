@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   useTransactionsList,
@@ -6,6 +6,7 @@ import {
   useUpdateTransactionCategory,
   type DateRangeFilter,
 } from "./useTransactionsData";
+import type { Transaction } from "../types/transaction";
 import { CategoryFilterPills } from "../components/CategoryFilterPills";
 import { DateRangeSelector } from "../components/DateRangeSelector";
 import { TransactionRow } from "../components/TransactionRow";
@@ -22,9 +23,6 @@ const VALID_RANGES: DateRangeFilter[] = [
 export function TransactionsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Initial state can be seeded via URL params, e.g. arriving from a
-  // Categories merchant drill-down link:
-  // /transactions?category=Eating+Out&merchant=Costa+Coffee&range=last_6_months
   const initialRange = searchParams.get("range");
   const initialCategory = searchParams.get("category");
   const initialMerchant = searchParams.get("merchant");
@@ -42,13 +40,35 @@ export function TransactionsPage() {
     initialMerchant ?? undefined
   );
 
+  // Pagination state for "all time" load-more
+  const [offset, setOffset] = useState(0);
+  const [accumulatedTransactions, setAccumulatedTransactions] = useState<Transaction[]>([]);
+
+  // Reset pagination whenever filters change
+  useEffect(() => {
+    setOffset(0);
+    setAccumulatedTransactions([]);
+  }, [dateRange, selectedCategories, lowConfidenceOnly, merchantFilter]);
+
   const { data: categories } = useAllCategories();
-  const { data: transactions, isLoading } = useTransactionsList({
+  const { data: page, isLoading, isFetching } = useTransactionsList({
     dateRange,
     categories: selectedCategories,
     lowConfidenceOnly,
     merchant: merchantFilter,
+    offset,
   });
+
+  // Accumulate pages as offset increases
+  useEffect(() => {
+    if (!page) return;
+    if (offset === 0) {
+      setAccumulatedTransactions(page.transactions);
+    } else {
+      setAccumulatedTransactions((prev) => [...prev, ...page.transactions]);
+    }
+  }, [page, offset]);
+
   const updateCategory = useUpdateTransactionCategory();
 
   function toggleCategory(category: string) {
@@ -62,6 +82,13 @@ export function TransactionsPage() {
     searchParams.delete("merchant");
     setSearchParams(searchParams);
   }
+
+  function handleLoadMore() {
+    setOffset((prev) => prev + 500);
+  }
+
+  const transactions = accumulatedTransactions;
+  const hasMore = page?.hasMore ?? false;
 
   return (
     <div className="transactions-page">
@@ -102,9 +129,11 @@ export function TransactionsPage() {
       </div>
 
       <div className="ledger">
-        {isLoading && <p className="transactions-empty">Loading transactions&hellip;</p>}
+        {isLoading && offset === 0 && (
+          <p className="transactions-empty">Loading transactions&hellip;</p>
+        )}
 
-        {!isLoading && transactions?.length === 0 && (
+        {!isLoading && transactions.length === 0 && (
           <p className="transactions-empty">
             {lowConfidenceOnly
               ? "Nothing needs review right now — every transaction has a confident category."
@@ -112,7 +141,7 @@ export function TransactionsPage() {
           </p>
         )}
 
-        {transactions?.map((tx) => (
+        {transactions.map((tx) => (
           <TransactionRow
             key={tx.id}
             transaction={tx}
@@ -126,6 +155,22 @@ export function TransactionsPage() {
             }
           />
         ))}
+
+        {hasMore && (
+          <div className="transactions-load-more">
+            <button
+              type="button"
+              className="transactions-load-more__button"
+              onClick={handleLoadMore}
+              disabled={isFetching}
+            >
+              {isFetching ? "Loading\u2026" : `Load more`}
+            </button>
+            <span className="transactions-load-more__count">
+              {transactions.length} shown so far
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

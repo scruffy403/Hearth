@@ -46,11 +46,14 @@ export function getDateRangeBounds(range: DateRangeFilter): {
   return {};
 }
 
+const PAGE_SIZE = 500;
+
 interface UseTransactionsListOptions {
   dateRange: DateRangeFilter;
   categories: string[];
   lowConfidenceOnly: boolean;
   merchant?: string;
+  offset?: number;
 }
 
 export function useTransactionsList({
@@ -58,30 +61,37 @@ export function useTransactionsList({
   categories,
   lowConfidenceOnly,
   merchant,
+  offset = 0,
 }: UseTransactionsListOptions) {
   const dateBounds = getDateRangeBounds(dateRange);
 
   return useQuery({
-    queryKey: ["transactions", "list", dateRange, categories, lowConfidenceOnly, merchant],
+    queryKey: ["transactions", "list", dateRange, categories, lowConfidenceOnly, merchant, offset],
     queryFn: async () => {
       const results = lowConfidenceOnly
         ? await transactionsApi.lowConfidence()
         : await transactionsApi.list({
             ...dateBounds,
             categories: categories.length > 0 ? categories : undefined,
-            limit: 500,
+            limit: PAGE_SIZE,
+            offset,
           });
 
       // Merchant filtering is done client-side rather than via a new
-      // backend param — at these volumes (a few hundred transactions
-      // per category per window) it's not worth the extra API surface.
-      if (!merchant) return results;
-      return results.filter(
-        (tx) => (tx.merchant_clean ?? tx.merchant_raw) === merchant
-      );
+      // backend param — at these volumes it's not worth the extra API surface.
+      const filtered = merchant
+        ? results.filter((tx) => (tx.merchant_clean ?? tx.merchant_raw) === merchant)
+        : results;
+
+      return {
+        transactions: filtered,
+        hasMore: results.length === PAGE_SIZE && dateRange === "all",
+      };
     },
   });
 }
+
+export { PAGE_SIZE };
 
 export function useAllCategories() {
   return useQuery({

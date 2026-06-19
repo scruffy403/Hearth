@@ -14,13 +14,23 @@ export function formatCurrencySigned(amount: number): string {
   return amount < 0 ? `−${formatted}` : `+${formatted}`;
 }
 
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+const dateFormatterNoYear = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
 });
 
+const dateFormatterWithYear = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
 export function formatDateShort(isoDate: string): string {
-  return dateFormatter.format(new Date(isoDate));
+  const date = new Date(isoDate);
+  const currentYear = new Date().getFullYear();
+  const formatter =
+    date.getFullYear() === currentYear ? dateFormatterNoYear : dateFormatterWithYear;
+  return formatter.format(date);
 }
 
 export function formatMonthName(date = new Date()): string {
