@@ -186,7 +186,7 @@ class YNABService:
             Summary dict with counts and any errors
         """
 
-        from sqlalchemy import select
+        from sqlalchemy import select, case
         from sqlalchemy.dialects.postgresql import insert
 
         from app.models.transaction import Transaction
@@ -259,6 +259,27 @@ class YNABService:
                         ml_confidence = Decimal(str(round(ml_prediction.confidence, 4)))
 
                 # Upsert — insert or update on conflict with ynab_transaction_id
+                #
+                # IMPORTANT: category_dashboard/category_source/ml_confidence
+                # must NOT be blindly overwritten on every sync. If a
+                # transaction was previously categorised by the ML model
+                # (source='ml') or manually corrected by a person
+                # (source='manual_override'), a later sync re-running the
+                # rule-based categorizer would otherwise silently reset it
+                # back to whatever the rules decide this time — typically
+                # 'Other', since those are exactly the transactions the
+                # rules couldn't handle in the first place. That's how the
+                # Phase 3 ML categorisations got wiped by subsequent syncs.
+                #
+                # The fix: only overwrite the category fields on conflict
+                # if the EXISTING row's category_source is one of the
+                # "safe to recompute" sources (ynab, keyword, amount, other).
+                # If the existing source is 'ml' or 'manual_override',
+                # preserve it — those represent a model decision or a
+                # deliberate human correction that a sync shouldn't silently
+                # discard.
+                safe_to_overwrite_sources = ("ynab", "keyword", "amount", "other")
+
                 stmt = insert(Transaction).values(
                     ynab_transaction_id=tx["id"],
                     date=self._parse_date(tx["date"]),
@@ -273,14 +294,33 @@ class YNABService:
                     ynab_approved=tx.get("approved", False),
                     is_transfer=False,
                     notes=tx.get("memo"),
-                ).on_conflict_do_update(
+                )
+                stmt = stmt.on_conflict_do_update(
                     index_elements=["ynab_transaction_id"],
                     set_=dict(
                         merchant_clean=merchant_clean,
                         category_ynab=category_ynab,
-                        category_dashboard=cat_result.category,
-                        category_source=cat_result.source,
-                        ml_confidence=ml_confidence,
+                        category_dashboard=case(
+                            (
+                                Transaction.category_source.in_(safe_to_overwrite_sources),
+                                cat_result.category,
+                            ),
+                            else_=Transaction.category_dashboard,
+                        ),
+                        category_source=case(
+                            (
+                                Transaction.category_source.in_(safe_to_overwrite_sources),
+                                cat_result.source,
+                            ),
+                            else_=Transaction.category_source,
+                        ),
+                        ml_confidence=case(
+                            (
+                                Transaction.category_source.in_(safe_to_overwrite_sources),
+                                ml_confidence,
+                            ),
+                            else_=Transaction.ml_confidence,
+                        ),
                         ynab_approved=tx.get("approved", False),
                         notes=tx.get("memo"),
                     ),
